@@ -1,0 +1,6 @@
+{
+  "name": "Distributed Job Scheduler & Cluster OS",
+  "description": "Distributed computational job scheduling and cluster orchestrator platform with Java RMI topology, consensus protocols, DAG pipelines, and real-time telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
