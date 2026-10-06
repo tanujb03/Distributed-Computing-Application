@@ -1,8 +1,12 @@
+# Generated dependencies and build output
 node_modules/
-build/
+**/node_modules/
 dist/
+**/dist/
 coverage/
+**/coverage/
+**/target/
+**/.env
+**/*.class
+**/*.log
 .DS_Store
-*.log
-.env*
-!.env.example
