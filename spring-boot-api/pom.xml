@@ -8,7 +8,7 @@
     <relativePath />
   </parent>
   <groupId>edu.distributedcomputing</groupId>
-  <artifactId>distributed-computing-backend</artifactId>
+  <artifactId>distributed-computing-spring-boot-api</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <name>Distributed Computing Control Plane API</name>
   <description>Spring Boot REST adapter for the existing Java RMI cluster</description>
@@ -86,13 +86,8 @@
     </dependencies>
   </dependencyManagement>
   <build>
-    <!-- Existing Java packages are intentionally left in place. -->
-    <sourceDirectory>${project.basedir}</sourceDirectory>
-    <resources>
-      <resource>
-        <directory>${project.basedir}/backend/resources</directory>
-      </resource>
-    </resources>
+    <!-- Compile the unchanged RMI/CLI sources alongside the API adapter. -->
+    <sourceDirectory>${project.basedir}/..</sourceDirectory>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>
@@ -103,13 +98,15 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <release>17</release>
-          <excludes>
-            <exclude>target/**</exclude>
-            <exclude>backend/test/**</exclude>
-          </excludes>
+          <includes>
+            <include>java-system/**/*.java</include>
+            <include>spring-boot-api/src/main/java/**/*.java</include>
+          </includes>
+          <testIncludes>
+            <testInclude>**/*.java</testInclude>
+          </testIncludes>
         </configuration>
       </plugin>
     </plugins>
-    <testSourceDirectory>${project.basedir}/backend/test</testSourceDirectory>
   </build>
 </project>
