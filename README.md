@@ -1,11 +1,14 @@
-# Distributed Computing Application
+# Distributed Computing Project
 
-The frontend and Java distributed system are maintained in this repository.
+This repository keeps the two experiment deliverables together: standalone Java/RMI programs and the website with its Spring Boot API.
 
-## Repository layout
+## Layout
 
-- `frontend/` — Vite, React, and TypeScript UI.
-- `backend/` — Java/Maven distributed system and Spring Boot adapter, with its original internal project layout preserved.
+- `java-system/` — pure Java command-line and RMI experiment code (`client`, `coordinator`, `node`, `shared`).
+- `spring-boot-api/` — REST adapter that calls the Java/RMI system, PostgreSQL persistence, and Spark Experiment 7 integration.
+- `frontend/` — Vite, React, and TypeScript website.
+
+The Spring Boot Maven module includes `java-system/` as source so both the API and the command-line node code continue to use the same implementation.
 
 ## Start the frontend
 
@@ -21,10 +24,10 @@ The Vite development server uses port 3000.
 
 ## Start PostgreSQL and Spring Boot
 
-From the repository root, create a local environment file from the example, set a local password, then start PostgreSQL:
+From the repository root:
 
 ```powershell
-cd backend
+cd spring-boot-api
 Copy-Item .env.example .env
 # Edit .env and set POSTGRES_PASSWORD
 
@@ -32,4 +35,5 @@ docker compose up -d
 .\mvnw.cmd spring-boot:run
 ```
 
-Spring Boot uses port 18080 by default, and PostgreSQL is published on port 55432. Keep `backend/.env` local; it is ignored by Git. RMI node startup and Experiment 7 notes are in `backend/backend/EXPERIMENT_7.md` and the Java project scripts/source.
+Spring Boot uses port 8080 by default, and PostgreSQL is published on port 55432. Keep `spring-boot-api/.env` local; it is ignored by Git. Experiment 7 instructions are in `spring-boot-api/EXPERIMENT_7.md`.
+
