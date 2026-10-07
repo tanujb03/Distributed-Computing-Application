@@ -2,6 +2,7 @@ package shared;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import shared.PrimaryBackupStatus;
 
 public interface NodeService extends Remote {
 
@@ -27,6 +28,12 @@ public interface NodeService extends Remote {
     int getLeaderId() throws RemoteException;
 
     boolean isAlive() throws RemoteException;
+
+    // Experiment 8: primary-backup job update recovery.
+    void configurePrimaryBackup(int primaryNodeId, int backupNodeId) throws RemoteException;
+    void simulatePrimaryFailure() throws RemoteException;
+    void primaryBackupUpdate(JobRecord record) throws RemoteException;
+    PrimaryBackupStatus getPrimaryBackupStatus(int jobId) throws RemoteException;
 
 
     // =========================================================

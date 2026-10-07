@@ -8,6 +8,7 @@ import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.CountDownLatch;
 
 public class NodeServer {
 
@@ -16,7 +17,7 @@ public class NodeServer {
         if (args.length < 2) {
             System.out.println(
                     "Usage: java node.NodeServer "
-                            + "<nodeId> <port> [clockOffsetMs]"
+                            + "<nodeId> <port> [clockOffsetMs] [--server-only]"
             );
             return;
         }
@@ -156,6 +157,12 @@ public class NodeServer {
                     "======================================"
             );
 
+
+            if (args.length >= 4 && "--server-only".equals(args[3])) {
+                System.out.println("Server-only mode: Node " + nodeId + " is serving RMI calls; Ctrl+C to stop.");
+                new CountDownLatch(1).await();
+                return;
+            }
 
             Scanner scanner =
                     new Scanner(System.in);

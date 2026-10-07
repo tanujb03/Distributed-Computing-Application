@@ -1,0 +1,10 @@
+services:
+  mpi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: distributed-computing-mpj:0.44
+    environment:
+      EXPERIMENT9_RANKS: ${EXPERIMENT9_RANKS:-4}
+    volumes:
+      - ./src:/experiment/src:ro
