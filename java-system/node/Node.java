@@ -3,6 +3,7 @@ package node;
 import shared.JobRecord;
 import shared.NodeInfo;
 import shared.NodeService;
+import shared.PrimaryBackupStatus;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -13,6 +14,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.time.Instant;
 
 public class Node extends UnicastRemoteObject
         implements NodeService {
@@ -50,6 +55,14 @@ public class Node extends UnicastRemoteObject
             new ConcurrentHashMap<>();
 
     private final ReplicationManager replicationManager;
+
+    // EXPERIMENT 8: designated primary-backup job update path.
+    private volatile int primaryNodeId = -1;
+    private volatile int backupNodeId = -1;
+    private volatile boolean simulatedUnavailable;
+    private volatile String primaryBackupState = "UNCONFIGURED";
+    private volatile int lastReplicatedVersion = -1;
+    private volatile ScheduledExecutorService primaryBackupMonitor;
 
 
     // =========================================================
@@ -266,8 +279,99 @@ public class Node extends UnicastRemoteObject
     @Override
     public boolean isAlive()
             throws RemoteException {
+        return !simulatedUnavailable;
+    }
 
-        return true;
+    @Override
+    public synchronized void configurePrimaryBackup(int primaryId, int backupId) throws RemoteException {
+        if (primaryId == backupId) throw new RemoteException("Primary and backup must be different nodes");
+        primaryNodeId = primaryId;
+        backupNodeId = backupId;
+        primaryBackupState = nodeId == primaryId ? "ACTIVE" : nodeId == backupId ? "STANDBY" : "OBSERVER";
+        if (nodeId == primaryId) {
+            try {
+                NodeInfo info = nodes.stream().filter(n -> n.getNodeId() == backupId).findFirst()
+                        .orElseThrow(() -> new RemoteException("Backup node is not configured"));
+                getRemoteNode(info).configurePrimaryBackup(primaryId, backupId);
+            } catch (RemoteException e) { throw e; }
+            catch (Exception e) { throw new RemoteException("Could not configure backup Node " + backupId, e); }
+        }
+        if (nodeId == backupId && primaryBackupMonitor == null) {
+            primaryBackupMonitor = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "node-" + nodeId + "-primary-heartbeat");
+                t.setDaemon(true);
+                return t;
+            });
+            primaryBackupMonitor.scheduleWithFixedDelay(this::checkPrimaryHealth, 0, 400, TimeUnit.MILLISECONDS);
+        }
+        System.out.println("[Node " + nodeId + "] Experiment 8 configured: primary=" + primaryId + ", backup=" + backupId);
+    }
+
+    private void checkPrimaryHealth() {
+        if (nodeId != backupNodeId || primaryBackupState.equals("PROMOTED")) return;
+        try {
+            NodeInfo primary = nodes.stream().filter(n -> n.getNodeId() == primaryNodeId).findFirst().orElseThrow();
+            boolean alive = getRemoteNode(primary).isAlive();
+            if (!alive) promoteBackup("Primary health check reported unavailable");
+        } catch (Exception e) {
+            promoteBackup("Primary RMI heartbeat failed: " + e.getClass().getSimpleName());
+        }
+    }
+
+    private synchronized void promoteBackup(String reason) {
+        if (nodeId != backupNodeId || primaryBackupState.equals("PROMOTED")) return;
+        primaryBackupState = "PROMOTED";
+        leaderId = nodeId;
+        System.out.println("[Node " + nodeId + "] PRIMARY_FAILURE_DETECTED: " + reason);
+        System.out.println("[Node " + nodeId + "] BACKUP_PROMOTED; new leader=Node " + nodeId);
+        for (NodeInfo info : nodes) {
+            if (info.getNodeId() == nodeId || info.getNodeId() == primaryNodeId) continue;
+            try { getRemoteNode(info).announceLeader(nodeId); }
+            catch (Exception e) { System.out.println("[Node " + nodeId + "] Could not announce leader to Node " + info.getNodeId()); }
+        }
+    }
+
+    @Override
+    public synchronized void simulatePrimaryFailure() throws RemoteException {
+        if (nodeId != primaryNodeId) throw new RemoteException("This operation can only fail the configured primary");
+        simulatedUnavailable = true;
+        primaryBackupState = "FAILED";
+        System.out.println("[Node " + nodeId + "] Controlled primary failure: health checks return unavailable and job writes are rejected.");
+    }
+
+    @Override
+    public synchronized void primaryBackupUpdate(JobRecord record) throws RemoteException {
+        if (simulatedUnavailable) throw new RemoteException("Primary Node " + nodeId + " is unavailable for job updates");
+        if (leaderId != nodeId) throw new RemoteException("Node " + nodeId + " is not the active leader (leader=" + leaderId + ")");
+        JobRecord current = jobStore.get(record.getJobId());
+        if (current != null && record.getVersion() <= current.getVersion())
+            throw new RemoteException("Job update version must increase beyond " + current.getVersion());
+        storeJobRecord(record);
+        lastReplicatedVersion = record.getVersion();
+        if (nodeId == primaryNodeId) primaryBackupState = "REPLICATING";
+        int acknowledgements = replicationManager.replicateSynchronously(record);
+        if (nodeId == primaryNodeId) {
+            try {
+                NodeInfo backup = nodes.stream().filter(n -> n.getNodeId() == backupNodeId).findFirst().orElseThrow();
+                int backupVersion = getRemoteNode(backup).getJobVersion(record.getJobId());
+                if (backupVersion < record.getVersion()) throw new RemoteException("Backup did not acknowledge JobRecord version " + record.getVersion());
+                primaryBackupState = "SYNCHRONIZED";
+            } catch (RemoteException e) { primaryBackupState = "REPLICATION_FAILED"; throw e; }
+            catch (Exception e) { primaryBackupState = "REPLICATION_FAILED"; throw new RemoteException("Could not verify backup replication", e); }
+        } else {
+            primaryBackupState = "RECOVERED";
+        }
+        System.out.println("[Node " + nodeId + "] Experiment 8 update committed; job=" + record.getJobId()
+                + ", version=" + record.getVersion() + ", synchronous acknowledgements=" + acknowledgements);
+    }
+
+    @Override
+    public synchronized PrimaryBackupStatus getPrimaryBackupStatus(int jobId) throws RemoteException {
+        JobRecord record = jobStore.get(jobId);
+        String role = nodeId == primaryNodeId ? "PRIMARY" : nodeId == backupNodeId ? "BACKUP" : "NODE";
+        return new PrimaryBackupStatus(nodeId, primaryNodeId, backupNodeId, leaderId, isAlive(), role,
+                primaryBackupState, record == null ? null : record.getVersion(), jobId,
+                record == null ? null : record.getStatus(), Instant.now());
     }
 
 
@@ -500,6 +604,8 @@ public class Node extends UnicastRemoteObject
             JobRecord record
     ) throws RemoteException {
 
+        if (simulatedUnavailable) throw new RemoteException("Node " + nodeId + " is unavailable for job writes");
+
         JobRecord existingRecord =
                 jobStore.get(
                         record.getJobId()
@@ -513,6 +619,12 @@ public class Node extends UnicastRemoteObject
                     record.getJobId(),
                     record
             );
+
+            if (nodeId == backupNodeId && nodeId != primaryNodeId
+                    && !primaryBackupState.equals("PROMOTED")) {
+                lastReplicatedVersion = Math.max(lastReplicatedVersion, record.getVersion());
+                primaryBackupState = "SYNCHRONIZED";
+            }
 
             System.out.println(
                     "[Node " + nodeId
@@ -638,6 +750,8 @@ public class Node extends UnicastRemoteObject
     public synchronized void assignJob(
             JobRecord record
     ) throws RemoteException {
+
+        if (simulatedUnavailable) throw new RemoteException("Node " + nodeId + " is unavailable for job assignment");
 
         assignedJobs.put(
                 record.getJobId(),
