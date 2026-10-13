@@ -16,6 +16,8 @@ services:
         sync: false
       - key: SPRING_DATASOURCE_PASSWORD
         sync: false
+      - key: DB_POOL_SIZE
+        value: '3'
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: DEMO_CONTROL_ENFORCE
@@ -42,4 +44,5 @@ services:
         value: "-Xms8m -Xmx48m -XX:+UseSerialGC"
       - key: EXPERIMENT10_DEFAULT_MATRIX_SIZE
         value: "48"
+
 
