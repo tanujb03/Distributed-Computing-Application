@@ -471,109 +471,72 @@ public class Node extends UnicastRemoteObject
     // =========================================================
 
     @Override
-    public synchronized void ringElection(
+    public void ringElection(
             int initiatorId,
             int candidateId
     ) throws RemoteException {
 
-        List<NodeInfo> sortedNodes =
-                new ArrayList<>(nodes);
-
-        sortedNodes.sort(
-                Comparator.comparingInt(
-                        NodeInfo::getNodeId
-                )
-        );
-
-        NodeInfo nextNode =
-                getNextAliveNode();
+        NodeInfo nextNode = getNextAliveNode();
+        int highestCandidate = Math.max(candidateId, nodeId);
 
         if (nextNode == null) {
-            leaderId = candidateId;
-            announceLeader(candidateId);
-            return;
-        }
-
-        if (nextNode.getNodeId() == initiatorId) {
-
-            leaderId = candidateId;
-
-            ringCoordinator(
-                    initiatorId,
-                    candidateId
-            );
-
+            leaderId = highestCandidate;
+            announceLeader(highestCandidate);
             return;
         }
 
         try {
-
-            NodeService remoteNode =
-                    getRemoteNode(nextNode);
-
-            int highestCandidate =
-                    Math.max(
-                            candidateId,
-                            nodeId
-                    );
-
-            remoteNode.ringElection(
-                    initiatorId,
-                    highestCandidate
-            );
-
+            NodeService remoteNode = getRemoteNode(nextNode);
+            if (nextNode.getNodeId() == initiatorId) {
+                // The election token has made one full pass. Start the
+                // coordinator pass at the initiator and bound it by the
+                // configured ring size so the message visits every live node.
+                remoteNode.ringCoordinator(initiatorId, highestCandidate, nodes.size());
+            } else {
+                remoteNode.ringElection(initiatorId, highestCandidate);
+            }
         } catch (Exception e) {
-
-            System.out.println(
-                    "Ring election could not contact Node "
-                            + nextNode.getNodeId()
-            );
+            throw new RemoteException(
+                    "Ring election could not contact Node " + nextNode.getNodeId(), e);
         }
     }
 
 
     @Override
-    public synchronized void ringCoordinator(
+    public void ringCoordinator(
             int initiatorId,
             int newLeaderId
     ) throws RemoteException {
+        ringCoordinator(initiatorId, newLeaderId, nodes.size());
+    }
+
+
+    @Override
+    public void ringCoordinator(
+            int initiatorId,
+            int newLeaderId,
+            int hopsRemaining
+    ) throws RemoteException {
 
         leaderId = newLeaderId;
-
         System.out.println(
-                "[Node " + nodeId
-                        + "] Ring coordinator received. "
-                        + "Leader = Node "
-                        + newLeaderId
-        );
+                "[Node " + nodeId + "] Ring coordinator received. Leader = Node " + newLeaderId);
 
-        NodeInfo nextNode =
-                getNextAliveNode();
+        if (hopsRemaining <= 1) {
+            return;
+        }
 
+        NodeInfo nextNode = getNextAliveNode();
         if (nextNode == null) {
             return;
         }
 
-        if (nextNode.getNodeId() == initiatorId) {
-            return;
-        }
-
         try {
-
-            NodeService remoteNode =
-                    getRemoteNode(nextNode);
-
-            remoteNode.ringCoordinator(
-                    initiatorId,
-                    newLeaderId
-            );
-
+            getRemoteNode(nextNode).ringCoordinator(
+                    initiatorId, newLeaderId, hopsRemaining - 1);
         } catch (Exception e) {
-
-            System.out.println(
-                    "Could not forward coordinator "
-                            + "message."
-            );
+            throw new RemoteException(
+                    "Could not forward Ring coordinator to Node " + nextNode.getNodeId(), e);
         }
     }
 

@@ -55,15 +55,22 @@ public class Experiment9Service {
 
     public Experiment9StatusResponse status() {
         Path projectRoot = projectRoot();
-        boolean filesExist = Files.isRegularFile(projectRoot.resolve(composeFile))
-                && Files.isRegularFile(projectRoot.resolve("experiment9/src/mpi/MpiCollectiveDemo.java"));
+        boolean local = "local".equalsIgnoreCase(launcher);
+        boolean filesExist = Files.isRegularFile(projectRoot.resolve("experiment9/src/mpi/MpiCollectiveDemo.java"))
+                && Files.isRegularFile(projectRoot.resolve("experiment9/run-mpi.sh"))
+                && (local ? Files.isRegularFile(Path.of("/usr/bin/mpjrun"))
+                        && Files.isRegularFile(Path.of("/opt/app/mpi/experiment9/classes/mpi/MpiCollectiveDemo.class"))
+                        : Files.isRegularFile(projectRoot.resolve(composeFile)));
         boolean launcherResponds = false;
         String reason = "";
         try {
-            Process probe = new ProcessBuilder(launcher, "info", "--format", "{{.ServerVersion}}").directory(projectRoot.toFile())
-                    .redirectErrorStream(true).start();
-            launcherResponds = probe.waitFor(3, TimeUnit.SECONDS) && probe.exitValue() == 0;
-            if (!launcherResponds) reason = "Container launcher is unavailable or did not return a successful version check";
+            if (local) launcherResponds = Files.isExecutable(Path.of("/usr/bin/mpjrun"));
+            else {
+                Process probe = new ProcessBuilder(launcher, "info", "--format", "{{.ServerVersion}}").directory(projectRoot.toFile())
+                        .redirectErrorStream(true).start();
+                launcherResponds = probe.waitFor(3, TimeUnit.SECONDS) && probe.exitValue() == 0;
+                if (!launcherResponds) reason = "Container launcher is unavailable or did not return a successful version check";
+            }
         } catch (Exception e) { reason = "Container launcher could not be started: " + message(e); }
         boolean configured = filesExist && launcherResponds;
         if (filesExist && reason.isEmpty()) reason = "Configured four-rank MPJ Express runner is available";
@@ -74,7 +81,9 @@ public class Experiment9Service {
     public Experiment9RunResponse run() {
         Instant started = Instant.now();
         long startedNanos = System.nanoTime();
-        String command = launcher + " compose -f " + composeFile + " run --build --rm -T mpi";
+        String command = "local".equalsIgnoreCase(launcher)
+                ? "/bin/sh experiment9/run-mpi.sh"
+                : launcher + " compose -f " + composeFile + " run --build --rm -T mpi";
         Map<String,Object> parameters = Map.of("runtime", RUNTIME, "ranks", ranks, "rootRank", 0,
                 "broadcast", "Matrix Multiplication", "scatter", List.of(10,20,30,40), "command", command);
         long runId = runs.start(9, started, parameters);
@@ -82,13 +91,20 @@ public class Experiment9Service {
 
         if (ranks != 4) return persistFailure(runId, started, startedNanos, command, "Experiment 9 data requires exactly four ranks", -1, "", "");
         Path projectRoot = projectRoot();
-        List<String> commandParts = List.of(launcher, "compose", "-f", composeFile, "run", "--build", "--rm", "-T", "mpi");
+        List<String> commandParts = "local".equalsIgnoreCase(launcher)
+                ? List.of("/bin/sh", projectRoot.resolve("experiment9/run-mpi.sh").toString())
+                : List.of(launcher, "compose", "-f", composeFile, "run", "--build", "--rm", "-T", "mpi");
         Process process;
         CompletableFuture<String> stdoutFuture;
         CompletableFuture<String> stderrFuture;
         try {
             ProcessBuilder builder = new ProcessBuilder(commandParts).directory(projectRoot.toFile());
+            backend.runtime.MpiProcessEnvironment.clearGlobalJvmOptions(builder);
             builder.environment().put("EXPERIMENT9_RANKS", Integer.toString(ranks));
+            if ("local".equalsIgnoreCase(launcher)) {
+                builder.environment().put("EXPERIMENT9_CLASSES_DIR", "/opt/app/mpi/experiment9/classes");
+                builder.environment().put("MPJ_HOME", "/usr/share/mpj");
+            }
             process = builder.start();
             stdoutFuture = readAsync(process.getInputStream());
             stderrFuture = readAsync(process.getErrorStream());
@@ -178,3 +194,6 @@ public class Experiment9Service {
     private Path projectRoot() { return Path.of(projectRootSetting).toAbsolutePath().normalize(); }
     private String message(Exception e) { return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage(); }
 }
+
+
+

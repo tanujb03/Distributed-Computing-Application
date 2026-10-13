@@ -1,3 +1,4 @@
+import { fetchApi } from '../services/api';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, Play, RefreshCw, XCircle } from 'lucide-react';
 
@@ -7,7 +8,7 @@ const field = 'rounded-lg border border-[#253e65] bg-[#070e1d] px-3 py-2 text-xs
 const panel = 'rounded-xl border border-[#1e2f4d] bg-[#0e172a] p-4';
 
 async function request<T = Json>(url: string, init?: RequestInit): Promise<T | null> {
-  const response = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } });
+  const response = await fetchApi(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } });
   if (response.status === 204) return null;
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.message || body.error || `${response.status} ${response.statusText}`);
@@ -112,3 +113,4 @@ export default function Experiment10Panel() {
       <section className={panel}><h3 className="mb-3 text-sm font-bold text-white">Recent Experiment 10 runs</h3>{runs.length ? <div className="max-h-80 space-y-2 overflow-auto">{runs.map(run => <div key={run.runId} className="rounded border border-[#1e2f4d] bg-[#091122] px-3 py-2 text-[11px]"><div className="flex justify-between gap-2"><b className={run.status === 'SUCCEEDED' ? 'text-emerald-200' : 'text-rose-200'}>Run #{run.runId} · {run.status}</b><span className="text-[#8299b8]">{new Date(run.startedAt).toLocaleString()}</span></div><div className="mt-1 text-[#8299b8]">{run.parameters?.matrixSize} × {run.parameters?.matrixSize} · {run.parameters?.processCount} ranks</div></div>)}</div> : <p className="text-xs text-[#8299b8]">Run history will appear after the first execution.</p>}</section></div>
   </div>;
 }
+

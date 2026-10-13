@@ -7,6 +7,7 @@ services:
     environment:
       EXPERIMENT10_RANKS: ${EXPERIMENT10_RANKS:-4}
       EXPERIMENT10_MATRIX_SIZE: ${EXPERIMENT10_MATRIX_SIZE:-200}
+      MPJ_JAVA_TOOL_OPTIONS: ${MPJ_JAVA_TOOL_OPTIONS:-}
     volumes:
       - ./src:/experiment10/src:ro
       - ./run-mpi.sh:/experiment10/run-mpi.sh:ro

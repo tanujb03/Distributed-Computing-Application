@@ -14,13 +14,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/experiments/7")
 public class MapReduceController {
     private final SparkMapReduceService mapReduce;
-    public MapReduceController(SparkMapReduceService mapReduce) { this.mapReduce = mapReduce; }
+    private final backend.service.ComputeExecutionGate computeGate;
+    public MapReduceController(SparkMapReduceService mapReduce, backend.service.ComputeExecutionGate computeGate) { this.mapReduce = mapReduce; this.computeGate = computeGate; }
 
     @PostMapping("/run")
     public MapReduceRunResponse run(@Valid @RequestBody(required = false) MapReduceRunRequest request) {
-        return mapReduce.run(request);
+        return computeGate.runExclusive(() -> mapReduce.run(request));
     }
 
     @GetMapping
     public MapReduceRunResponse latest() { return mapReduce.latest(); }
 }
+

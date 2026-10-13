@@ -6,5 +6,6 @@ services:
     image: distributed-computing-mpj:0.44
     environment:
       EXPERIMENT9_RANKS: ${EXPERIMENT9_RANKS:-4}
+      MPJ_JAVA_TOOL_OPTIONS: ${MPJ_JAVA_TOOL_OPTIONS:-}
     volumes:
       - ./src:/experiment/src:ro

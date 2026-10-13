@@ -15,14 +15,15 @@ import java.util.List;
 @RequestMapping("/api/experiments/9")
 public class Experiment9Controller {
     private final Experiment9Service service;
-    public Experiment9Controller(Experiment9Service service) { this.service = service; }
+    private final backend.service.ComputeExecutionGate computeGate;
+    public Experiment9Controller(Experiment9Service service, backend.service.ComputeExecutionGate computeGate) { this.service = service; this.computeGate = computeGate; }
 
     @GetMapping("/status")
     public Experiment9StatusResponse status() { return service.status(); }
 
     @PostMapping("/run")
     public ResponseEntity<Experiment9RunResponse> run() {
-        Experiment9RunResponse response = service.run();
+        Experiment9RunResponse response = computeGate.runExclusive(service::run);
         return ResponseEntity.status("SUCCEEDED".equals(response.status()) ? HttpStatus.OK : HttpStatus.BAD_GATEWAY).body(response);
     }
 
@@ -32,3 +33,4 @@ public class Experiment9Controller {
     @GetMapping("/events")
     public List<Experiment9EventResponse> events() { return service.events(); }
 }
+

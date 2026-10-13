@@ -1,9 +1,10 @@
+import { fetchApi } from '../services/api';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, ArrowRight, CircleHelp, Play, RefreshCw } from 'lucide-react';
 
 type Json=Record<string,any>;
 const btn='inline-flex items-center gap-2 rounded-lg border border-[#2b4b7a] bg-[#182a44] px-3 py-2 text-xs font-semibold text-[#89ceff] transition hover:bg-[#233d64] disabled:cursor-not-allowed disabled:opacity-50';
-async function request<T=Json>(url:string,init?:RequestInit):Promise<T>{const r=await fetch(url,{...init,headers:{'Content-Type':'application/json',...init?.headers}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||data.message||`${r.status} ${r.statusText}`);return data as T;}
+async function request<T=Json>(url:string,init?:RequestInit):Promise<T>{const r=await fetchApi(url,{...init,headers:{'Content-Type':'application/json',...init?.headers}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||data.message||`${r.status} ${r.statusText}`);return data as T;}
 function Panel({title,children,action}:{title:string;children:React.ReactNode;action?:React.ReactNode}){return <section className="rounded-xl border border-[#1e2f4d] bg-[#0e172a] p-4"><div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-bold text-white">{title}</h2>{action}</div>{children}</section>;}
 
 export default function Experiment9Panel(){
@@ -41,3 +42,4 @@ export default function Experiment9Panel(){
   </div>;
 }
 function Metric({label,value}:{label:string;value:React.ReactNode}){return <div className="rounded-lg border border-[#1e2f4d] bg-[#091122] p-3"><div className="text-[9px] uppercase tracking-wider text-[#8299b8]">{label}</div><div className="mt-1 truncate text-sm font-bold text-white">{value}</div></div>;}
+
