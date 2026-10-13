@@ -39,7 +39,7 @@ public class Experiment9Service {
                               SystemEventRepository events, ObjectMapper mapper,
                               @Value("${experiment9.launcher:docker}") String launcher,
                               @Value("${experiment9.compose-file:experiment9/compose.yaml}") String composeFile,
-                              @Value("${experiment9.project-root:..}") String projectRootSetting,
+                              @Value("${experiment9.project-root:../java-system/shared}") String projectRootSetting,
                               @Value("${experiment9.ranks:4}") int ranks,
                               @Value("${experiment9.timeout-seconds:120}") int timeoutSeconds) {
         this.runs = runs;
