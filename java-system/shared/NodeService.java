@@ -61,6 +61,12 @@ public interface NodeService extends Remote {
             int leaderId
     ) throws RemoteException;
 
+    void ringCoordinator(
+            int initiatorId,
+            int leaderId,
+            int hopsRemaining
+    ) throws RemoteException;
+
 
     // =========================================================
     // EXPERIMENT 5

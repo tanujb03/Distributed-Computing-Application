@@ -15,8 +15,9 @@ import java.util.List;
 @RequestMapping("/api/experiments/10")
 public class Experiment10Controller {
     private final Experiment10Service service;
+    private final backend.service.ComputeExecutionGate computeGate;
 
-    public Experiment10Controller(Experiment10Service service) { this.service = service; }
+    public Experiment10Controller(Experiment10Service service, backend.service.ComputeExecutionGate computeGate) { this.service = service; this.computeGate = computeGate; }
 
     @GetMapping("/status")
     public Experiment10StatusResponse status() { return service.status(); }
@@ -25,7 +26,7 @@ public class Experiment10Controller {
     public ResponseEntity<Experiment10RunResponse> run(@RequestBody RunRequest request) {
         if (request == null || request.matrixSize() == null || request.matrixSize() < 2 || request.matrixSize() > 512)
             throw new IllegalArgumentException("matrixSize is required and must be between 2 and 512");
-        Experiment10RunResponse result = service.run(request.matrixSize());
+        Experiment10RunResponse result = computeGate.runExclusive(() -> service.run(request.matrixSize()));
         return ResponseEntity.status("SUCCEEDED".equals(result.status()) ? HttpStatus.OK : HttpStatus.BAD_GATEWAY).body(result);
     }
 
@@ -42,3 +43,4 @@ public class Experiment10Controller {
 
     public record RunRequest(Integer matrixSize) { }
 }
+

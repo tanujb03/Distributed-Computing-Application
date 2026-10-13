@@ -1,0 +1,15 @@
+**/.git
+.env
+**/.env
+.env.*
+**/.env.*
+node_modules
+**/node_modules
+**/target
+**/dist
+**/.idea
+**/.vscode
+**/*.class
+**/*.log
+**/coverage
+.DS_Store

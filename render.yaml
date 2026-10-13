@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: distributed-computing-control-plane
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./spring-boot-api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health/live
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: DEMO_CONTROL_ENFORCE
+        value: "true"
+      - key: DEMO_CONTROL_TOKEN
+        sync: false
+      - key: EXPERIMENT7_SPARK_MASTER
+        value: local[1]
+      - key: EXPERIMENT7_SPARK_PARTITIONS
+        value: "1"
+      - key: EXPERIMENT9_LAUNCHER
+        value: local
+      - key: EXPERIMENT9_PROJECT_ROOT
+        value: /opt/app/java-system/shared
+      - key: EXPERIMENT9_RANKS
+        value: "4"
+      - key: EXPERIMENT10_LAUNCHER
+        value: local
+      - key: EXPERIMENT10_PROJECT_ROOT
+        value: /opt/app/java-system/shared
+      - key: EXPERIMENT10_RANKS
+        value: "4"
+      - key: MPJ_JAVA_TOOL_OPTIONS
+        value: "-Xms8m -Xmx48m -XX:+UseSerialGC"
+      - key: EXPERIMENT10_DEFAULT_MATRIX_SIZE
+        value: "48"
+

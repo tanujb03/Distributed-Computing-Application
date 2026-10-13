@@ -59,15 +59,22 @@ public class Experiment10Service {
 
     public Experiment10StatusResponse status() {
         Path root = projectRoot();
-        boolean filesExist = Files.isRegularFile(root.resolve(composeFile))
-                && Files.isRegularFile(root.resolve("experiment10/src/mpi/ParallelMatrixMultiplication.java"));
+        boolean local = "local".equalsIgnoreCase(launcher);
+        boolean filesExist = Files.isRegularFile(root.resolve("experiment10/src/mpi/ParallelMatrixMultiplication.java"))
+                && Files.isRegularFile(root.resolve("experiment10/run-mpi.sh"))
+                && (local ? Files.isRegularFile(Path.of("/usr/bin/mpjrun"))
+                        && Files.isRegularFile(Path.of("/opt/app/mpi/experiment10/classes/mpi/ParallelMatrixMultiplication.class"))
+                        : Files.isRegularFile(root.resolve(composeFile)));
         boolean launcherResponds = false;
         String message = "";
         try {
-            Process probe = new ProcessBuilder(launcher, "info", "--format", "{{.ServerVersion}}")
-                    .directory(root.toFile()).redirectErrorStream(true).start();
-            launcherResponds = probe.waitFor(4, TimeUnit.SECONDS) && probe.exitValue() == 0;
-            if (!launcherResponds) message = "Docker is unavailable or did not return a successful version check";
+            if (local) launcherResponds = Files.isExecutable(Path.of("/usr/bin/mpjrun"));
+            else {
+                Process probe = new ProcessBuilder(launcher, "info", "--format", "{{.ServerVersion}}")
+                        .directory(root.toFile()).redirectErrorStream(true).start();
+                launcherResponds = probe.waitFor(4, TimeUnit.SECONDS) && probe.exitValue() == 0;
+                if (!launcherResponds) message = "Docker is unavailable or did not return a successful version check";
+            }
         } catch (Exception e) { message = "Docker could not be started: " + safeMessage(e); }
         boolean configured = filesExist && launcherResponds;
         if (!filesExist) message = "Experiment 10 source or Compose configuration is missing under " + root;
@@ -81,7 +88,9 @@ public class Experiment10Service {
             throw new IllegalArgumentException("matrixSize must be between 2 and " + MAX_MATRIX_SIZE);
         Instant startedAt = Instant.now();
         long startNanos = System.nanoTime();
-        String command = launcher + " compose -f " + composeFile + " run --build --rm -T mpi";
+        String command = "local".equalsIgnoreCase(launcher)
+                ? "/bin/sh experiment10/run-mpi.sh"
+                : launcher + " compose -f " + composeFile + " run --build --rm -T mpi";
         Map<String,Object> parameters = Map.of("matrixSize", matrixSize, "rows", matrixSize,
                 "columns", matrixSize, "processCount", ranks, "rootRank", 0, "runtime", RUNTIME,
                 "algorithm", "row-wise A partition with Bcast/Scatter/Gather");
@@ -95,10 +104,16 @@ public class Experiment10Service {
         CompletableFuture<String> stdoutFuture;
         CompletableFuture<String> stderrFuture;
         try {
-            ProcessBuilder builder = new ProcessBuilder(launcher, "compose", "-f", composeFile,
-                    "run", "--build", "--rm", "-T", "mpi").directory(projectRoot().toFile());
+                        ProcessBuilder builder = "local".equalsIgnoreCase(launcher)
+                    ? new ProcessBuilder("/bin/sh", projectRoot().resolve("experiment10/run-mpi.sh").toString()).directory(projectRoot().toFile())
+                    : new ProcessBuilder(launcher, "compose", "-f", composeFile, "run", "--build", "--rm", "-T", "mpi").directory(projectRoot().toFile());
+            backend.runtime.MpiProcessEnvironment.clearGlobalJvmOptions(builder);
             builder.environment().put("EXPERIMENT10_RANKS", Integer.toString(ranks));
             builder.environment().put("EXPERIMENT10_MATRIX_SIZE", Integer.toString(matrixSize));
+            if ("local".equalsIgnoreCase(launcher)) {
+                builder.environment().put("EXPERIMENT10_CLASSES_DIR", "/opt/app/mpi/experiment10/classes");
+                builder.environment().put("MPJ_HOME", "/usr/share/mpj");
+            }
             process = builder.start();
             stdoutFuture = readAsync(process.getInputStream());
             stderrFuture = readAsync(process.getErrorStream());
@@ -201,3 +216,6 @@ public class Experiment10Service {
     private Path projectRoot() { return Path.of(projectRootSetting).toAbsolutePath().normalize(); }
     private String safeMessage(Exception e) { return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage(); }
 }
+
+
+

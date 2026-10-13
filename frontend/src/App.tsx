@@ -1,3 +1,4 @@
+import { fetchApi, setDemoControlToken } from './services/api';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Experiment8Panel from './components/Experiment8Panel';
 import Experiment9Panel from './components/Experiment9Panel';
@@ -24,7 +25,7 @@ const experiments = [
 ];
 const pathFor = (view: View) => view === 'experiment-1' || view.startsWith('experiment-') ? `/experiments/${view.split('-')[1]}` : `/${view}`;
 function viewForPath(path: string): View { const match = path.match(/^\/experiments\/(\d+)/); if (match) return `experiment-${Math.max(1, Math.min(10, Number(match[1])))}`; return (['/cluster','/jobs','/experiments','/activity'].includes(path) ? path.slice(1) : 'dashboard') as View; }
-async function api<T = Json>(url: string, init?: RequestInit): Promise<T> { const response = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.message || body.error || `${response.status} ${response.statusText}`); return body as T; }
+async function api<T = Json>(url: string, init?: RequestInit): Promise<T> { const response = await fetchApi(url, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.message || body.error || `${response.status} ${response.statusText}`); return body as T; }
 const post = (url: string, body: Json) => api(url, { method: 'POST', body: JSON.stringify(body) });
 function Panel({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) { return <section className={box}><div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-bold text-white">{title}</h2>{action}</div>{children}</section>; }
 function JsonResult({ value }: { value: unknown }) { return <pre className="mt-3 max-h-72 overflow-auto rounded-lg bg-[#040812] p-3 text-[11px] leading-5 text-emerald-300">{JSON.stringify(value, null, 2)}</pre>; }
@@ -66,6 +67,7 @@ export default function App() {
 
   return <div className="min-h-screen bg-[#070d18] font-sans text-[#dce2f7] selection:bg-[#89ceff] selection:text-[#00344d]">
     <header className="border-b border-[#1c2b46] bg-[#070e1d] px-5 py-4"><div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-white"><Network className="h-5 w-5 text-[#89ceff]"/><h1 className="text-lg font-bold">Distributed Computing Lab</h1></div><p className="mt-1 text-xs text-[#8299b8]">Java RMI cluster · Spring Boot adapter · PostgreSQL · Apache Spark</p></div><div className="hidden items-center gap-2 rounded-full border border-emerald-800 bg-emerald-950/40 px-3 py-1 text-[11px] text-emerald-300 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"/>Live integration</div></div></header>
+    <DemoControlAccess />
     <nav className="sticky top-0 z-10 border-b border-[#1c2c46] bg-[#091122] px-4"><div className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto py-1.5">{nav.map(({id,label,icon:Icon}) => <button key={id} onClick={() => navigate(id)} className={`flex items-center gap-2 whitespace-nowrap rounded-lg border px-3.5 py-2 text-xs font-medium ${view === id || (id === 'experiments' && !!currentExperiment) ? 'border-[#2d4972] bg-[#15253d] text-white' : 'border-transparent text-[#8fa6c5] hover:bg-[#0f1b2f] hover:text-white'}`}><Icon className="h-4 w-4 text-[#89ceff]"/>{label}</button>)}</div></nav>
     <main className="mx-auto max-w-[1500px] space-y-5 p-5">
       {error && <div role="alert" className="flex items-start justify-between gap-3 rounded-lg border border-rose-700 bg-rose-950/50 p-3 text-sm text-rose-200"><span>Request failed: {error}</span><button onClick={() => setError('')} aria-label="Dismiss">×</button></div>}
@@ -111,3 +113,17 @@ function ExperimentPage({experiment:e,back,busy,run,result,setResult,rmi,clocks,
     </div><div className="space-y-4"><Panel title="Aim · Algorithm · Nodes"><div className="space-y-3 text-xs"><div><b className="text-white">Aim</b><p className="mt-1 text-[#9aacc7]">{e.description}</p></div><div><b className="text-white">Algorithm / concept</b><p className="mt-1 text-[#9aacc7]">{e.concept}</p></div><div><b className="text-white">Runtime</b><p className="mt-1 text-[#9aacc7]">{e.api?'Operations call the actual existing backend.':'Backend implementation pending; no runtime calls are made.'}</p></div></div></Panel>{e.api&&<Panel title={e.n===3?'Clock readings':e.n===6?'Worker load state':e.n===1?'RMI reachability':e.n===7?'Latest persisted run':'Actual operation result'}>{(e.n===3?clocks:e.n===6?loadData:e.n===1?rmi:result)?<JsonResult value={e.n===3?clocks:e.n===6?loadData:e.n===1?rmi:result}/>:<p className="text-xs text-[#8299b8]">Run or refresh an operation to view its actual response.</p>}</Panel>}<Panel title="Experiment event log"><ActivityList items={experimentFeed} empty="Run an operation to record its actual response in this session."/></Panel></div></div>
   </div>;
 }
+
+
+function DemoControlAccess() {
+  const [token, setToken] = useState('');
+  const [active, setActive] = useState(false);
+  return <div className="border-b border-[#1c2b46] bg-[#091122] px-5 py-2"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-2 text-xs">
+    <span className="text-[#8299b8]">Demo controls</span>
+    <input aria-label="Demo control token" type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)} placeholder="Enter server demo token" className="rounded border border-[#253e65] bg-[#070e1d] px-2 py-1 text-white" />
+    <button className={btn} onClick={() => { setDemoControlToken(token); setActive(Boolean(token.trim())); }}>Unlock controls</button>
+    <button className={btn} onClick={() => { setToken(''); setDemoControlToken(''); setActive(false); }}>Clear</button>
+    <span className={active ? 'text-emerald-300' : 'text-[#8299b8]'}>{active ? 'Token held in page memory' : 'Read-only mode until unlocked'}</span>
+  </div></div>;
+}
+

@@ -1,3 +1,4 @@
+import { fetchApi } from '../services/api';
 import React, { useCallback, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, Play, RefreshCw, Shield, Server } from 'lucide-react';
 
@@ -6,7 +7,7 @@ type Status = { primaryNodeId:number; backupNodeId:number; currentLeaderId:numbe
 type Event = { eventId:number; eventType:string; occurredAt:string; nodeId:number|null; jobId:string|null; details:Record<string,unknown> };
 const button='inline-flex items-center gap-2 rounded-lg border border-[#2b4b7a] bg-[#182a44] px-3 py-2 text-xs font-semibold text-[#89ceff] transition hover:bg-[#233d64] disabled:cursor-not-allowed disabled:opacity-50';
 const input='rounded-lg border border-[#253e65] bg-[#070e1d] px-3 py-2 text-xs text-white outline-none focus:border-[#89ceff]';
-async function request<T>(url:string, body?:unknown):Promise<T>{const res=await fetch(url,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});const json=await res.json().catch(()=>({}));if(!res.ok)throw new Error(json.message||json.error||`${res.status} ${res.statusText}`);return json as T;}
+async function request<T>(url:string, body?:unknown):Promise<T>{const res=await fetchApi(url,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});const json=await res.json().catch(()=>({}));if(!res.ok)throw new Error(json.message||json.error||`${res.status} ${res.statusText}`);return json as T;}
 
 export default function Experiment8Panel(){
   const [jobId,setJobId]=useState('8301');const [version,setVersion]=useState(1);const [status,setStatus]=useState<Status|null>(null);const [events,setEvents]=useState<Event[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
@@ -27,3 +28,4 @@ export default function Experiment8Panel(){
   </div>;
 }
 function Metric({label,value}:{label:string;value:string}){return <div className="rounded-lg border border-[#1e2f4d] bg-[#091122] p-3"><div className="text-[9px] uppercase tracking-wider text-[#8299b8]">{label}</div><div className="mt-1 text-sm font-bold text-white">{value}</div></div>;}
+

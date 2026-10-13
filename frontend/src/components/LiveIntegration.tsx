@@ -1,3 +1,4 @@
+import { fetchApi } from '../services/api';
 import React, { useCallback, useEffect, useState } from 'react';
 
 type Json = Record<string, any>;
@@ -6,7 +7,7 @@ const button = 'rounded-lg border border-[#2b4b7a] bg-[#182a44] px-3 py-2 text-x
 const field = 'rounded-lg border border-[#253e65] bg-[#070e1d] px-3 py-2 text-xs text-white';
 
 async function api<T = Json>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } });
+  const response = await fetchApi(path, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.message || body.error || `${response.status} ${response.statusText}: ${JSON.stringify(body)}`);
   return body as T;
@@ -56,3 +57,4 @@ export function LiveExperiments() {
     </div>
   </div>;
 }
+
