@@ -13,10 +13,10 @@ Four ranks run in one Docker Linux container. The root is rank 0. The shared val
 From the combined-project root, run:
 
 ```powershell
-docker compose -f experiment9/compose.yaml run --build --rm -T mpi
+docker compose -f java-system/shared/experiment9/compose.yaml run --build --rm -T mpi
 ```
 
-The image is built from Debian Bullseye and uses the pinned MPJ package. The container compiles `experiment9/src/mpi/MpiCollectiveDemo.java` against MPJ and runs `mpjrun -np 4 -dev multicore`. The same source and command are used by the Spring Boot endpoint.
+The image is built from Debian Bullseye and uses the pinned MPJ package. The container compiles `java-system/shared/experiment9/src/mpi/MpiCollectiveDemo.java` against MPJ and runs `mpjrun -np 4 -dev multicore`. The same source and command are used by the Spring Boot endpoint.
 
 ## Spring Boot settings
 
@@ -25,7 +25,7 @@ Defaults are in `spring-boot-api/src/main/resources/application.properties`. The
 ```text
 EXPERIMENT9_LAUNCHER=docker
 EXPERIMENT9_COMPOSE_FILE=experiment9/compose.yaml
-EXPERIMENT9_PROJECT_ROOT=..
+EXPERIMENT9_PROJECT_ROOT=../java-system/shared
 EXPERIMENT9_RANKS=4
 EXPERIMENT9_TIMEOUT_SECONDS=120
 ```

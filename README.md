@@ -4,7 +4,7 @@ This repository keeps the two experiment deliverables together: standalone Java/
 
 ## Layout
 
-- `java-system/` — pure Java command-line and RMI experiment code (`client`, `coordinator`, `node`, `shared`).
+- `java-system/` — pure Java command-line and RMI experiment code (`client`, `coordinator`, `node`, `shared`). The MPI labs are grouped under `java-system/shared/experiment9/` and `java-system/shared/experiment10/` alongside the shared Java contracts.
 - `spring-boot-api/` — REST adapter that calls the Java/RMI system, PostgreSQL persistence, and Spark Experiment 7 integration.
 - `frontend/` — Vite, React, and TypeScript website.
 

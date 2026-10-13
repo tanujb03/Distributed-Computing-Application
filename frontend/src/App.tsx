@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Experiment8Panel from './components/Experiment8Panel';
 import Experiment9Panel from './components/Experiment9Panel';
+import Experiment10Panel from './components/Experiment10Panel';
 import { Activity, ArrowLeft, ArrowRight, Boxes, CheckCircle2, CircleHelp, Clock3, Cpu, Database, ExternalLink, FlaskConical, Gauge, GitBranch, LayoutDashboard, Network, Play, RefreshCw, Server, Shield, Workflow } from 'lucide-react';
 
 type Json = Record<string, any>;
@@ -19,7 +20,7 @@ const experiments = [
   { n: 7, title: 'MapReduce using Apache Spark', description: 'Run JobRecord aggregation through the Spark Java RDD pipeline.', concept: 'Map · Shuffle · Reduce', api: true },
   { n: 8, title: 'Fault Tolerance / Primary-Backup Replication', description: 'Replicate versioned job state and continue scheduler updates after the primary fails.', concept: 'Primary-backup failover', api: true },
   { n: 9, title: 'MPI Collective Communication', description: 'Run real four-rank Java MPI Broadcast, Scatter, rank-local calculation, and Gather operations.', concept: 'Broadcast · Scatter · Gather', api: true },
-  { n: 10, title: 'Parallel Matrix Multiplication using MPI', description: 'Parallel matrix multiplication experiment interface is planned.', concept: 'MPI parallelism', api: false }
+  { n: 10, title: 'Parallel Matrix Multiplication using MPI', description: 'Distribute matrix computation, gather partial results, and compare sequential and parallel execution time.', concept: 'MPI Bcast · Scatter · Gather', api: true }
 ];
 const pathFor = (view: View) => view === 'experiment-1' || view.startsWith('experiment-') ? `/experiments/${view.split('-')[1]}` : `/${view}`;
 function viewForPath(path: string): View { const match = path.match(/^\/experiments\/(\d+)/); if (match) return `experiment-${Math.max(1, Math.min(10, Number(match[1])))}`; return (['/cluster','/jobs','/experiments','/activity'].includes(path) ? path.slice(1) : 'dashboard') as View; }
@@ -95,6 +96,7 @@ function ExperimentPage({experiment:e,back,busy,run,result,setResult,rmi,clocks,
   const experimentFeed=feed.filter(item=>item.label.startsWith(`experiment-${e.n}:`));
   if(e.n===8) return <div className="space-y-5"><div className="flex flex-wrap items-start gap-3">{back}<div><div className="text-[10px] font-mono tracking-widest text-[#89ceff]">EXPERIMENT 08 · LIVE BACKEND</div><h1 className="mt-1 text-xl font-bold text-white">Fault Tolerance using Primary-Backup Replication</h1><p className="mt-1 text-xs text-[#8299b8]">Actual Java RMI health detection, backup promotion, and continued versioned job updates.</p></div></div><Experiment8Panel/></div>;
   if(e.n===9) return <div className="space-y-5"><div className="flex flex-wrap items-start gap-3">{back}<div><div className="text-[10px] font-mono tracking-widest text-[#89ceff]">EXPERIMENT 09 · LIVE MPI RUNTIME</div><h1 className="mt-1 text-xl font-bold text-white">MPI Collective Communication</h1><p className="mt-1 text-xs text-[#8299b8]">Broadcast · Scatter · Gather · Four ranks, root rank 0</p></div></div><Experiment9Panel/></div>;
+  if(e.n===10) return <div className="space-y-5"><div className="flex flex-wrap items-start gap-3">{back}<div><div className="text-[10px] font-mono tracking-widest text-[#89ceff]">EXPERIMENT 10 · LIVE MPI RUNTIME</div><h1 className="mt-1 text-xl font-bold text-white">Experiment 10 — Parallel Matrix Multiplication using MPI</h1><p className="mt-1 text-xs text-[#8299b8]">Distribute matrix computation, gather partial results, and compare sequential and parallel execution time.</p></div></div><Experiment10Panel/></div>;
   return <div className="space-y-5"><div className="flex flex-wrap items-start justify-between gap-3">{back}<div className="mr-auto"><div className="text-[10px] font-mono tracking-widest text-[#89ceff]">EXPERIMENT {String(e.n).padStart(2,'0')} · {e.api?'LIVE BACKEND':'PLACEHOLDER'}</div><h1 className="mt-1 text-xl font-bold text-white">{e.title}</h1><p className="mt-1 text-xs text-[#8299b8]">{e.description}</p></div><span className={`rounded-full border px-3 py-1 text-[10px] font-bold ${e.api?'border-emerald-800 bg-emerald-950/50 text-emerald-300':'border-amber-800 bg-amber-950/50 text-amber-200'}`}>{e.api?'IMPLEMENTED':'BACKEND IMPLEMENTATION PENDING'}</span></div>
     <div className="grid gap-3 sm:grid-cols-3"><Metric label="Aim / concept" value={e.concept} icon={CircleHelp}/><Metric label="Nodes involved" value="Java RMI nodes" icon={Server}/><Metric label="Current execution" value={busy?'RUNNING':result?'RESULT AVAILABLE':'READY'} icon={Activity}/></div>
     <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]"><div className="space-y-4">

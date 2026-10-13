@@ -102,6 +102,11 @@
             <include>java-system/**/*.java</include>
             <include>spring-boot-api/src/main/java/**/*.java</include>
           </includes>
+          <!-- MPI sources compile inside the pinned MPJ Docker runtime, not the Spring module. -->
+          <excludes>
+            <exclude>java-system/shared/experiment9/src/**/*.java</exclude>
+            <exclude>java-system/shared/experiment10/src/**/*.java</exclude>
+          </excludes>
           <testIncludes>
             <testInclude>**/*.java</testInclude>
           </testIncludes>
